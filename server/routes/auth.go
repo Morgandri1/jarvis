@@ -12,7 +12,15 @@ func Auth(w http.ResponseWriter, r *http.Request) {
     err := json.NewDecoder(r.Body).Decode(&user_payload)
     if err != nil {
         // return HTTP 400 bad request
-        http.Error(w, err.Error(), http.StatusBadRequest)
+        res := constants.Response{
+        	Status: 1,
+         	Data: nil,
+          	Error: {
+           		Error: "ClientError",
+            	Message: "There was an error decoding the authentication payload. Check your request body."
+           	}
+        }
+        http.Error(w, , http.StatusBadRequest)
         return
     }
     db := database.Connect()

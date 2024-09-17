@@ -3,7 +3,6 @@ package database
 import (
 	"fmt"
 	"database/sql"
-	"jarvis/util"
 	"jarvis/constants"
 	"crypto/sha256"
 )
@@ -53,7 +52,7 @@ func Update_password(db *sql.DB, id string, old string, new string) {
 	h := sha256.New()
 	h.Write([]byte(old))
 	hash := fmt.Sprintf("%x", h.Sum(nil))
-	var resp string
+	var resp sql.Row
 	if e := db.QueryRow("SELECT hash FROM users WHERE id = $1", old).Scan(&resp); e != nil { panic(e) }
 	if resp != hash { panic("Could not authenticate") }
 	h.Reset()
@@ -67,7 +66,8 @@ func Authenticate_user(db *sql.DB, username string, password string) constants.U
 	h := sha256.New()
 	h.Write([]byte(password))
 	hash := fmt.Sprintf("%x", h.Sum(nil))
-	resp := db.QueryRow("SELECT * FROM users WHERE username = $1 AND password = $2", username, hash)
+	var resp sql.Row
+	if e := db.QueryRow("SELECT * FROM users WHERE username = $1 AND password = $2", username, hash).Scan(&resp); e != nil { panic(e) }
 	var user constants.User
 	err := resp.Scan(&user.Id, &user.Username, &user.Apps, &user.Notifications)
 	if err != nil { panic(err) }
@@ -83,6 +83,17 @@ func Remove_app(db *sql.DB, id string, app string) {
 	_, err := db.Exec("UPDATE ONLY users SET apps = array_remove(apps, $2) WHERE id = $1", id, app)
 	if err != nil {
 		panic(err)
+	}
+}
+
+func Get_apps(db *sql.DB, user constants.User) {
+	var apps []constants.App
+	for _, app := range user.Apps {
+		var resp string
+		if e := db.QueryRow("SELECT * FROM apps WHERE id = $1", app).Scan(&resp); e != nil { panic(e) }
+		if resp != "" {
+			apps = append(apps, resp)
+		}
 	}
 }
 
